@@ -1,111 +1,157 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap');
+
+/*
+ * A forensic lab report, not a dashboard.
+ *
+ * The page is paper. Alarm red is the only loud thing on it, so that when a row
+ * turns red it reads as evidence rather than decoration. Hue encodes privacy
+ * state and nothing else — buttons, links and chrome stay ink and graphite.
+ *
+ * Teal is deliberately not success-green: the product is never allowed to say
+ * "safe", so its resolved state must not whisper it either.
+ */
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --paper: #f6f5f1;
+  --panel: #ffffff;
+  --ink: #1a1d21;
+  --ink-secondary: #5d6169;
+  --ink-tertiary: #8b8f96;
+  --rule: #dad7ce;
+  --rule-strong: #c3bfb2;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --alarm: #b42318;
+  --alarm-wash: #fbeae7;
+  --resolved: #0e7c66;
+  --resolved-wash: #e3f1ec;
+  --marker: #b7791f;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --serif: 'Newsreader', Georgia, serif;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  --step: 8px;
+  --row-height: 36px;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+* {
   box-sizing: border-box;
 }
 
-body {
+html,
+body,
+#root {
   margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Every number in the interface is compared against another number. */
+.mono,
+td,
+th {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
 }
 
 h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
+h2,
+h3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
   margin: 0;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  cursor: pointer;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+/* Focus stays visible: an audit tool that cannot be keyboard-driven is a poor
+   advertisement for taking accessibility seriously. */
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+}
+
+.hairline {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 0;
+}
+
+/* --- the sentence flip: the one moment that gets to move ----------------- */
+
+@keyframes strike-out {
+  from {
+    color: var(--alarm);
+    background: var(--alarm-wash);
+  }
+  to {
+    color: var(--alarm);
+    background: var(--alarm-wash);
+    opacity: 0;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    background: var(--resolved-wash);
+    color: var(--resolved);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0);
+    background: var(--resolved-wash);
+    color: var(--resolved);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    background: transparent;
+    color: var(--ink);
+  }
+}
+
+.flip-out {
+  animation: strike-out 260ms var(--ease) forwards;
+  text-decoration: line-through;
+}
+
+.flip-in {
+  animation: rise-in 1400ms var(--ease) forwards;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flip-out,
+  .flip-in {
+    animation: none;
+  }
+  .flip-out {
+    display: none;
+  }
 }

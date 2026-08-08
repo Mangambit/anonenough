@@ -41,6 +41,7 @@ function weightedPick<T>(rng: () => number, items: [T, number][]): T {
 
 export const COL = {
   timestamp: 'Timestamp',
+  name: 'Your name',
   age: 'How old are you?',
   grade: 'What grade are you in?',
   activity: 'What is your main after-school activity?',
@@ -74,6 +75,25 @@ export const ACTIVITY_CATEGORY: Record<string, string> = {
 };
 
 const HOMEROOMS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+
+/**
+ * Invented names for the demo.
+ *
+ * The name column exists so the app can start where a real editor starts —
+ * looking at a spreadsheet that obviously identifies everyone — and so deleting
+ * it is something you watch happen rather than something you're told about.
+ * These people do not exist.
+ */
+const FIRST_NAMES = [
+  'Priya', 'Marcus', 'Leila', 'Tomás', 'Aisha', 'Noah', 'Yuki', 'Dara',
+  'Sofia', 'Omar', 'Hannah', 'Kwame', 'Ines', 'Ravi', 'Clara', 'Mateo',
+  'Nadia', 'Elias', 'Mei', 'Jonah', 'Zara', 'Felix', 'Amara', 'Luca',
+];
+const LAST_INITIALS = 'ABCDEFGHIKLMNOPRSTVW'.split('');
+
+function makeName(rng: () => number): string {
+  return `${pick(rng, FIRST_NAMES)} ${pick(rng, LAST_INITIALS)}.`;
+}
 
 /**
  * Build a school roster. Ages correlate with grade the way they really do,
