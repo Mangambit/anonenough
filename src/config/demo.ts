@@ -18,16 +18,16 @@ import type { ColumnLadder, Dataset } from '../lib/types';
  * almost every respondent unique, and that is far more powerful as something
  * the sensitivity panel reveals than as a default nobody chose.
  */
-export const DEFAULT_QUASI_IDENTIFIERS = [COL.grade, COL.activity];
+export const DEFAULT_QUASI_IDENTIFIERS: string[] = [COL.grade, COL.activity];
 
 /** Columns offered as "what else might they know?" in the sensitivity sweep. */
-export const CANDIDATE_QUASI_IDENTIFIERS = [COL.age, COL.homeroom];
+export const CANDIDATE_QUASI_IDENTIFIERS: string[] = [COL.age, COL.homeroom];
 
 /** The question whose answer would actually hurt if it leaked. */
-export const SENSITIVE_COLUMN = COL.vaped;
+export const SENSITIVE_COLUMN: string = COL.vaped;
 
 /** Columns that are answers, not identifiers — never offered as QIs. */
-export const ANSWER_COLUMNS = [COL.sleep, COL.safe, COL.vaped];
+export const ANSWER_COLUMNS: string[] = [COL.sleep, COL.safe, COL.vaped];
 
 export function buildLadders(dataset: Dataset, columns: string[]): ColumnLadder[] {
   return columns.map((column) =>

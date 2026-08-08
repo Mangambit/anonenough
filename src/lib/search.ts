@@ -84,11 +84,6 @@ export function distortionOf(ladders: ColumnLadder[], policy: Policy): number {
   return sum / ladders.length;
 }
 
-/** Total ladder steps taken — the integer depth used to order the search. */
-function stepsOf(ladders: ColumnLadder[], policy: Policy): number {
-  return ladders.reduce((sum, ladder) => sum + (policy[ladder.column] ?? 0), 0);
-}
-
 export function describePolicy(ladders: ColumnLadder[], policy: Policy): string {
   const parts = ladders
     .filter((ladder) => (policy[ladder.column] ?? 0) > 0)

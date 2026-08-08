@@ -10,7 +10,15 @@
  *      and print the winner so it can be committed.
  */
 
-import { autoLadder, computeClasses, homogeneousClasses, sensitivitySweep } from '../src/lib/anonymize';
+import {
+  autoLadder,
+  computeClasses,
+  homogeneousClasses,
+  sensitivitySweep,
+  SUPPRESSED,
+} from '../src/lib/anonymize';
+import { computeDiversity } from '../src/lib/diversity';
+import type { DiversityResult } from '../src/lib/diversity';
 import { computeRisk, formatRisk } from '../src/lib/risk';
 import { attackerSentence, advisorNote } from '../src/lib/sentence';
 import { computeFidelity } from '../src/lib/tvd';
@@ -152,7 +160,7 @@ console.log('\n3. Seed search for the shipped demo');
     if (!search.knee || search.knee.k < 5) continue;
     if (search.knee.fidelity < 0.85) continue;
 
-    const risk = computeRisk(survey, ladders, exact, result, generateRoster(seed));
+    const risk = computeRisk(ladders, exact, result, generateRoster(seed));
     winner = {
       seed,
       report: [
@@ -176,7 +184,7 @@ console.log('\n3. Seed search for the shipped demo');
     const exact: Policy = EXACT_POLICY;
     const result = computeClasses(survey, ladders, exact);
     const search = searchFrontier(survey, ladders, TABLES, [2, 3, 5, 8, 11, 14, 20]);
-    const risk = computeRisk(survey, ladders, exact, result, generateRoster(winner.seed));
+    const risk = computeRisk(ladders, exact, result, generateRoster(winner.seed));
     const fid = computeFidelity(survey, ladders, search.knee!.policy, TABLES);
 
     console.log('\n        frontier:');
@@ -213,6 +221,213 @@ console.log('\n3. Seed search for the shipped demo');
 
     console.log(`\n        lattice size: ${latticeSize(ladders)}`);
   }
+}
+
+// ---------------------------------------------------------------------------
+console.log('\n4. l-diversity (k protects identity, not answers)');
+// ---------------------------------------------------------------------------
+{
+  /**
+   * Score a distribution directly. Every row shares one quasi-identifier value,
+   * so computeClasses returns exactly one equivalence class holding exactly
+   * these answers — which lets a check state a distribution and read back its l.
+   */
+  const ANSWER = 'answer';
+  const scoreOneClass = (answers: string[]): DiversityResult => {
+    const dataset: Dataset = {
+      columns: ['group', ANSWER],
+      rows: answers.map((answer) => ({ group: 'G', [ANSWER]: answer })),
+      label: 'Hand-constructed equivalence class',
+    };
+    const ladders = [autoLadder(dataset, 'group')];
+    return computeDiversity(dataset, computeClasses(dataset, ladders, { group: 0 }), ANSWER);
+  };
+  const repeat = (value: string, times: number) =>
+    Array.from({ length: times }, () => value);
+
+  // (a) The hand-written sample's known homogeneous group.
+  const sample = handCheckSample();
+  const ladders = laddersFor(sample);
+  const result = computeClasses(sample, ladders, EXACT_POLICY);
+  const diversity = computeDiversity(sample, result, COL.vaped);
+
+  // Rows 5-7 are the {grade 10, Soccer} block, written by hand to answer the
+  // sensitive question identically. k says 3 people; l says the 3 hide nothing.
+  const homogeneousGroup = diversity.perClass[result.classIndex[5]];
+  check(
+    'the hand-written all-"Yes" group holds 3 rows',
+    homogeneousGroup.size === 3,
+    `size ${homogeneousGroup.size}, key ${homogeneousGroup.key.join(' / ')}`,
+  );
+  check(
+    'that group has distinct-l = 1',
+    homogeneousGroup.distinctL === 1,
+    `distinct-l ${homogeneousGroup.distinctL}`,
+  );
+  check(
+    'that group has entropy-l = 1',
+    homogeneousGroup.entropyL === 1,
+    `entropy-l ${homogeneousGroup.entropyL.toFixed(4)}`,
+  );
+
+  // The two modules have to agree about the extreme case, or one of them is
+  // wrong: anything homogeneousClasses() flags must score 1 on both measures.
+  const flagged = homogeneousClasses(sample, result, COL.vaped);
+  const agree = flagged.every((cls) => {
+    const scored = diversity.perClass[result.classes.indexOf(cls)];
+    return scored.distinctL === 1 && scored.entropyL === 1;
+  });
+  check(
+    'every group homogeneousClasses() flags scores l = 1 on both measures',
+    flagged.length >= 1 && agree,
+    `${flagged.length} flagged group(s)`,
+  );
+  check(
+    'so the sample as a whole is only 1-diverse',
+    diversity.distinctL === 1 && diversity.entropyL === 1,
+    `distinct-l ${diversity.distinctL}, entropy-l ${diversity.entropyL.toFixed(4)}`,
+  );
+  check(
+    'worstClass points at the largest homogeneous group, not a singleton',
+    diversity.worstClass !== null && diversity.worstClass.index === result.classIndex[5],
+    diversity.worstClass
+      ? `size ${diversity.worstClass.size}, ${diversity.worstClass.counts.map((c) => `${c.value || '(blank)'}×${c.count}`).join(' ')}`
+      : 'none',
+  );
+
+  // (b) entropy-l ≤ distinct-l, across the whole policy lattice and three
+  //     different sensitive columns. Entropy can only ever be the stricter one.
+  const survey = generateSurvey(1234);
+  const surveyLadders = laddersFor(survey);
+  const sensitiveColumns = [COL.vaped, COL.safe, COL.sleep];
+  const policyCount = surveyLadders[0].levels.length * surveyLadders[1].levels.length;
+  let comparisons = 0;
+  let violations = 0;
+  let strictlyStricter = 0;
+
+  for (let grade = 0; grade < surveyLadders[0].levels.length; grade++) {
+    for (let activity = 0; activity < surveyLadders[1].levels.length; activity++) {
+      const policy: Policy = { [COL.grade]: grade, [COL.activity]: activity };
+      const classes = computeClasses(survey, surveyLadders, policy);
+      for (const column of sensitiveColumns) {
+        const scored = computeDiversity(survey, classes, column);
+        comparisons++;
+        if (scored.entropyL > scored.distinctL) violations++;
+        for (const cls of scored.perClass) {
+          comparisons++;
+          // 1 ≤ entropy-l ≤ distinct-l ≤ class size, for every class with rows.
+          if (cls.entropyL < 1) violations++;
+          if (cls.entropyL > cls.distinctL) violations++;
+          if (cls.distinctL > cls.size) violations++;
+          if (cls.entropyL < cls.distinctL) strictlyStricter++;
+        }
+      }
+    }
+  }
+  check(
+    'entropy-l ≤ distinct-l ≤ class size, everywhere',
+    violations === 0,
+    `${comparisons} comparisons over ${policyCount} policies × ${sensitiveColumns.length} sensitive columns, ${violations} violations`,
+  );
+  check(
+    'and entropy-l is strictly smaller somewhere, so it is not a restatement',
+    strictlyStricter > 0,
+    `${strictlyStricter} class(es) where entropy-l < distinct-l`,
+  );
+
+  // (c) The 13/1 split — the case distinct-l gets wrong.
+  const skewed = scoreOneClass([...repeat('No', 13), 'Yes']);
+  check(
+    '13-No / 1-Yes class has distinct-l = 2',
+    skewed.distinctL === 2,
+    `distinct-l ${skewed.distinctL}`,
+  );
+  check(
+    'but entropy-l < 1.5 — barely above a homogeneous class',
+    skewed.entropyL < 1.5,
+    `entropy-l ${skewed.entropyL.toFixed(4)}, best guess right ${(skewed.perClass[0].counts[0].share * 100).toFixed(0)}% of the time`,
+  );
+
+  // The contrast that makes the point: the same two answers, evenly split,
+  // really are 2-diverse. Distinct-l cannot tell these two classes apart.
+  const balanced = scoreOneClass([...repeat('No', 7), ...repeat('Yes', 7)]);
+  check(
+    '7-No / 7-Yes class has distinct-l = 2 AND entropy-l = 2',
+    balanced.distinctL === 2 && Math.abs(balanced.entropyL - 2) < 1e-12,
+    `entropy-l ${balanced.entropyL.toFixed(4)}`,
+  );
+
+  // (d) Edge cases the module promises to handle exactly.
+  const withBlank = scoreOneClass([...repeat('No', 13), '   ']);
+  check(
+    'a blank sensitive answer is its own category, not dropped',
+    withBlank.distinctL === 2 &&
+      withBlank.perClass[0].counts.some((c) => c.value === '' && c.count === 1),
+    `distinct-l ${withBlank.distinctL}, entropy-l ${withBlank.entropyL.toFixed(4)}`,
+  );
+
+  const singleton = scoreOneClass(['Yes']);
+  check(
+    'a single-row class scores 1 on both measures and is still measured',
+    singleton.distinctL === 1 && singleton.entropyL === 1 && singleton.measuredClasses === 1,
+    'a class of one discloses the answer with certainty',
+  );
+
+  const allSuppressed = scoreOneClass(repeat(SUPPRESSED, 3));
+  check(
+    'a class whose sensitive column was suppressed is flagged, not scored',
+    allSuppressed.suppressedClasses === 1 &&
+      allSuppressed.measuredClasses === 0 &&
+      allSuppressed.worstClass === null &&
+      allSuppressed.distinctL === 0,
+    'nothing was published, so there is nothing to disclose',
+  );
+
+  const partlySuppressed = scoreOneClass([...repeat(SUPPRESSED, 2), 'Yes']);
+  check(
+    'a partially suppressed class is measured normally',
+    partlySuppressed.measuredClasses === 1 && partlySuppressed.distinctL === 2,
+    `distinct-l ${partlySuppressed.distinctL}, entropy-l ${partlySuppressed.entropyL.toFixed(4)}`,
+  );
+
+  const nothing = scoreOneClass([]);
+  check(
+    'an empty dataset yields no classes and no false alarm',
+    nothing.perClass.length === 0 &&
+      nothing.worstClass === null &&
+      nothing.distinctL === 0 &&
+      nothing.entropyL === 0,
+    'l = 0 means "nothing measurable", not "maximally disclosive"',
+  );
+
+  // (e) The whole reason this module exists, on real demo data: the remediation
+  //     the search recommends raises k, and the answers stay exposed anyway.
+  //     Deliberately asserted as a property rather than against a pinned number,
+  //     because the demo seed and the ladders are still moving.
+  const demo = generateSurvey(1);
+  const demoLadders = laddersFor(demo);
+  const demoSearch = searchFrontier(demo, demoLadders, TABLES, [2, 3, 5, 8, 11, 14, 20]);
+  const knee = demoSearch.knee;
+  if (knee) {
+    const atKnee = computeClasses(demo, demoLadders, knee.policy);
+    const demoDiversity = computeDiversity(demo, atKnee, COL.vaped);
+    check(
+      'the recommended fix raises k but still leaves a class that leaks the answer',
+      demoDiversity.entropyL < 2,
+      `seed 1 at the knee: k=${atKnee.k}, distinct-l ${demoDiversity.distinctL}, entropy-l ${demoDiversity.entropyL.toFixed(4)}`,
+    );
+    const worst = demoDiversity.worstClass;
+    if (worst) {
+      console.log(
+        `        worst class at the knee: ${worst.size} people, ` +
+          `${worst.counts.map((c) => `${c.value || '(blank)'}×${c.count}`).join(' ')} ` +
+          `(${worst.key.join(' / ')})`,
+      );
+    }
+  }
+  console.log(
+    `        13/1 entropy-l ${skewed.entropyL.toFixed(3)} vs 7/7 entropy-l ${balanced.entropyL.toFixed(3)} — distinct-l calls both 2`,
+  );
 }
 
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : `${failures} CHECK(S) FAILED`}\n`);

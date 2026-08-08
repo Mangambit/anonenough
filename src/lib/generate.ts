@@ -156,6 +156,7 @@ export function generateSurvey(seed: number, rosterSize = 800, responseRate = 0.
 
     rows.push({
       [COL.timestamp]: new Date(clock).toISOString().slice(0, 16).replace('T', ' '),
+      [COL.name]: makeName(rng),
       [COL.age]: person[COL.age],
       [COL.grade]: person[COL.grade],
       [COL.activity]: activity,
@@ -169,6 +170,7 @@ export function generateSurvey(seed: number, rosterSize = 800, responseRate = 0.
   return {
     columns: [
       COL.timestamp,
+      COL.name,
       COL.age,
       COL.grade,
       COL.activity,
@@ -178,7 +180,7 @@ export function generateSurvey(seed: number, rosterSize = 800, responseRate = 0.
       COL.vaped,
     ],
     rows,
-    label: `Synthetic survey — generated, seed ${seed}`,
+    label: `Synthetic survey — generated from seed ${seed}. These people do not exist.`,
   };
 }
 

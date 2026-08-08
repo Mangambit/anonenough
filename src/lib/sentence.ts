@@ -148,7 +148,8 @@ export interface AdvisorNoteInput {
   journalist: string | null;
   journalistIsUpperBound: boolean;
   fidelityPercent: string | null;
-  homogeneousCount: number;
+  /** Worst-case answer predictability, from diversity.ts. */
+  worstAnswer: { size: number; topCount: number; topValue: string } | null;
   quasiIdentifiers: string[];
   rowCount: number;
 }
@@ -161,7 +162,7 @@ export function advisorNote(input: AdvisorNoteInput): string {
     journalist,
     journalistIsUpperBound,
     fidelityPercent,
-    homogeneousCount,
+    worstAnswer,
     quasiIdentifiers,
     rowCount,
   } = input;
@@ -185,11 +186,17 @@ export function advisorNote(input: AdvisorNoteInput): string {
   if (fidelityPercent) {
     lines.push(`The tables we planned to publish retain ${fidelityPercent} of their original shape.`);
   }
-  lines.push(
-    homogeneousCount === 0
-      ? 'No group gives a single identical answer to the sensitive question.'
-      : `${homogeneousCount} ${homogeneousCount === 1 ? 'group answers' : 'groups answer'} the sensitive question identically — an attacker who narrows someone to such a group learns their answer without identifying them.`,
-  );
+  // Reporting only fully-identical groups reads as "the answers are fine" while
+  // a 9-person group that splits 8-to-1 still gives an attacker the answer 89%
+  // of the time. State the worst predictability, not just the perfect leaks.
+  if (worstAnswer && worstAnswer.size > 0) {
+    const share = Math.round((worstAnswer.topCount / worstAnswer.size) * 100);
+    lines.push(
+      worstAnswer.topCount === worstAnswer.size
+        ? `k does not protect the answers: one group of ${worstAnswer.size} answered "${worstAnswer.topValue}" unanimously, so narrowing someone to it reveals their answer outright.`
+        : `Even where identity is protected, answers can still be guessed: the most predictable group has ${worstAnswer.size} people, ${worstAnswer.topCount} of whom answered "${worstAnswer.topValue}" — guessing that is right ${share}% of the time.`,
+    );
+  }
   lines.push(
     `This is a risk report under a stated set of assumptions, not a guarantee of anonymity.`,
   );
