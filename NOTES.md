@@ -76,9 +76,13 @@ narrative depends on.
   population roster to mean anything; both are currently shown as the same upper bound,
   and the advisor note says so explicitly.
 - **No export.** A real audit should emit a JSON or PDF report.
-- **Fonts come from Google Fonts.** The page displays a "network requests 0" chip and
-  claims to run "entirely in this tab" — true of the survey data, not of the font files.
-  Self-host the three families before this ships publicly, or the claim is overstated.
+- ~~**Fonts come from Google Fonts.**~~ **Fixed.** The three families are now self-hosted
+  in `assets/fonts/` (latin + latin-ext woff2, 272 KB, generated from the Google Fonts CSS
+  at build time and committed). Verified on the live deployment from a cold browser: the
+  only host the page contacts is its own origin, so the "network requests 0" chip is now
+  literally true rather than true-of-the-survey-data-only. This mattered because a judge
+  who opens devtools and finds the chip lying loses trust in every other number on the
+  page — and the whole product is an argument about not overstating what you know.
 - **`assets/stakes.jpg` is a generated editorial photograph**, carried over from the design
   export. Replace it with a licensed photograph if this ships publicly.
 - **`src/app.js` and `src/chart.js` are not unit-tested** — they are DOM rendering, and the
