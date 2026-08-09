@@ -1,2 +1,5 @@
 .vercel
 .gstack/
+
+# Demo video: 8MB binary, lives on Vimeo. Kept out so `git clone` stays fast.
+anonenough-demo.mp4
