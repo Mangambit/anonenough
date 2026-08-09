@@ -225,10 +225,15 @@ export function distortionOf(ladders, policy) {
   return sum / ladders.length;
 }
 
-export function describePolicy(ladders, policy) {
+/**
+ * `short` maps a column to its display label. It falls back to the column name
+ * itself, because an uploaded file's columns are not in the demo's label table
+ * and a recommendation that reads "undefined → removed" is worse than a long one.
+ */
+export function describePolicy(ladders, policy, short = SHORT) {
   const parts = ladders
     .filter((l) => (policy[l.column] || 0) > 0)
-    .map((l) => `${SHORT[l.column]} → ${l.levels[policy[l.column]].label}`);
+    .map((l) => `${(short && short[l.column]) || l.column} → ${l.levels[policy[l.column]].label}`);
   return parts.length ? parts.join(' · ') : 'the file unchanged';
 }
 
@@ -283,7 +288,7 @@ export const DEFAULT_TARGETS = [2, 3, 5, 8, 12, 20, 40];
  * back empty and the caller must show an explicit empty state rather than recommending
  * a policy that destroys a table the publisher said they needed.
  */
-export function searchFrontier(dataset, ladders, tables, targets = DEFAULT_TARGETS) {
+export function searchFrontier(dataset, ladders, tables, targets = DEFAULT_TARGETS, short = SHORT) {
   const total = ladders.reduce((p, l) => p * l.levels.length, 1);
   const maxDepth = ladders.reduce((s, l) => s + (l.levels.length - 1), 0);
 
@@ -310,7 +315,7 @@ export function searchFrontier(dataset, ladders, tables, targets = DEFAULT_TARGE
     const best = feasible.reduce((a, b) => (
       b.fidelity > a.fidelity || (b.fidelity === a.fidelity && b.distortion < a.distortion) ? b : a
     ));
-    frontier.push({ ...best, target, description: describePolicy(ladders, best.policy) });
+    frontier.push({ ...best, target, description: describePolicy(ladders, best.policy, short) });
   }
 
   // Several targets often land on the same policy; keep one point per distinct policy.

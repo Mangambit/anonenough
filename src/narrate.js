@@ -31,11 +31,31 @@ const FRAG_ORDER = {
 // everything else stacks in front of it.
 const TRAILING = /^(in|from|who|with|at|on|sleeping)\b/i;
 
-export function attackerSentence(dataset, ladders, policy, classResult, rowIndex) {
+export function attackerSentence(dataset, ladders, policy, classResult, rowIndex, desc) {
   const generalized = generalizeRow(dataset.rows[rowIndex], ladders, policy);
   const ci = classResult.classIndex[rowIndex];
   const classSize = ci >= 0 ? classResult.classes[ci].size : 1;
   const isUnique = classSize === 1;
+
+  // Uploaded files get plain "label value" clauses — we know nothing about their
+  // columns, and an invented idiom would read wrong ("in homeroom Sales").
+  if (desc && desc.generic) {
+    const clauses = [];
+    ladders.forEach((l, i) => {
+      const v = generalized[i];
+      if (v === SUPPRESSED || v === '') return;
+      clauses.push(`${desc.short[l.column]} ${v}`);
+    });
+    if (!clauses.length) {
+      return `This is one of ${classSize} responses with nothing left to tell them apart.`;
+    }
+    const list = clauses.length === 1
+      ? clauses[0]
+      : `${clauses.slice(0, -1).join(', ')} and ${clauses[clauses.length - 1]}`;
+    return isUnique
+      ? `This is the only response in the file with ${list}.`
+      : `This is one of ${classSize} responses with ${list}.`;
+  }
 
   const parts = [];
   ladders.forEach((l, i) => {

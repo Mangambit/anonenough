@@ -6,9 +6,16 @@
 //   • y is fitted to the data range rather than pinned to 0–100%, because surviving
 //     fidelity lives around 80–100% and a 0–100% axis renders the curve as a flat line.
 
+// Kept in sync by hand with the --accent-hi / --risk tokens in styles.css.
+// SVG presentation attributes cannot read CSS custom properties.
 const NS = 'http://www.w3.org/2000/svg';
-const ACCENT = '#5b93f0';
-const RISK = '#ff4d3d';
+const ACCENT = '#47a3ff';
+const RISK = '#ff453a';
+const GRID = 'rgba(255,255,255,0.09)';
+const GRID_FAINT = 'rgba(255,255,255,0.045)';
+const LABEL = '#5a5a62';
+const LINE = '#76767e';
+const PANEL = '#131316';
 
 function el(tag, attrs = {}, ...children) {
   const node = document.createElementNS(NS, tag);
@@ -32,15 +39,15 @@ const PAD_B = 44;
 
 function emptyChart() {
   return el('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': 'No publishable policy exists' },
-    el('line', { x1: PAD_L, x2: W - PAD_R, y1: H - PAD_B, y2: H - PAD_B, stroke: '#26292d' }),
-    el('line', { x1: PAD_L, x2: PAD_L, y1: PAD_T, y2: H - PAD_B, stroke: '#26292d' }),
+    el('line', { x1: PAD_L, x2: W - PAD_R, y1: H - PAD_B, y2: H - PAD_B, stroke: GRID }),
+    el('line', { x1: PAD_L, x2: PAD_L, y1: PAD_T, y2: H - PAD_B, stroke: GRID }),
     el('text', {
       x: (PAD_L + W - PAD_R) / 2, y: H / 2 - 6, 'text-anchor': 'middle',
       'font-family': 'JetBrains Mono, monospace', 'font-size': 12, fill: RISK,
     }, 'NO PUBLISHABLE POLICY EXISTS'),
     el('text', {
       x: (PAD_L + W - PAD_R) / 2, y: H / 2 + 14, 'text-anchor': 'middle',
-      'font-family': 'Instrument Sans, sans-serif', 'font-size': 12, fill: '#8b8f94',
+      'font-family': 'Instrument Sans, system-ui, sans-serif', 'font-size': 12, fill: '#8e8e96',
     }, 'Every route to a larger group destroys a table you declared for release.'));
 }
 
@@ -65,10 +72,10 @@ export function buildChart({ points, knee, ladders, policy, onPick }) {
   const gridlines = [0, 1 / 3, 2 / 3, 1].map((r, i) => {
     const f = fLo + r * span;
     return el('g', {},
-      el('line', { x1: PAD_L, x2: W - PAD_R, y1: sy(f), y2: sy(f), stroke: i === 3 ? '#26292d' : '#191c1f' }),
+      el('line', { x1: PAD_L, x2: W - PAD_R, y1: sy(f), y2: sy(f), stroke: i === 3 ? GRID : GRID_FAINT }),
       el('text', {
         x: PAD_L - 10, y: sy(f) + 4, 'text-anchor': 'end',
-        'font-family': 'JetBrains Mono, monospace', 'font-size': 10, fill: '#4e5359',
+        'font-family': 'JetBrains Mono, monospace', 'font-size': 10, fill: LABEL,
       }, `${Math.round(f * 100)}%`));
   });
 
@@ -97,11 +104,11 @@ export function buildChart({ points, knee, ladders, policy, onPick }) {
         })
         : el('circle', {
           cx: sx(p.k), cy: sy(p.fidelity), r: applied ? 5 : 3.5,
-          fill: applied ? ACCENT : '#0f1113', stroke: applied ? ACCENT : '#5c6167', 'stroke-width': 1.3,
+          fill: applied ? ACCENT : PANEL, stroke: applied ? ACCENT : '#76767e', 'stroke-width': 1.4,
         }),
       el('text', {
         x: sx(p.k), y: H - PAD_B + 18, 'text-anchor': 'middle',
-        'font-family': 'JetBrains Mono, monospace', 'font-size': 10.5, fill: isKnee ? ACCENT : '#5c6167',
+        'font-family': 'JetBrains Mono, monospace', 'font-size': 10.5, fill: isKnee ? ACCENT : LABEL,
       }, `k=${p.k}`));
 
     const pick = () => onPick({ ...p.policy });
@@ -118,9 +125,9 @@ export function buildChart({ points, knee, ladders, policy, onPick }) {
       el('stop', { offset: '100%', 'stop-color': ACCENT, 'stop-opacity': 0 }))),
     gridlines,
     el('path', { d: areaPath, fill: 'url(#ae-fill)' }),
-    el('path', { d: linePath, fill: 'none', stroke: '#6e747a', 'stroke-width': 1.4 }),
-    el('line', { x1: PAD_L, x2: PAD_L, y1: PAD_T, y2: H - PAD_B, stroke: '#26292d' }),
+    el('path', { d: linePath, fill: 'none', stroke: LINE, 'stroke-width': 1.6 }),
+    el('line', { x1: PAD_L, x2: PAD_L, y1: PAD_T, y2: H - PAD_B, stroke: GRID }),
     dots,
-    el('text', { x: 0, y: H - 6, 'font-family': 'JetBrains Mono, monospace', 'font-size': 10, 'letter-spacing': '0.1em', fill: '#4e5359' }, 'SMALLEST GROUP →'),
-    el('text', { x: 0, y: 10, 'font-family': 'JetBrains Mono, monospace', 'font-size': 10, 'letter-spacing': '0.1em', fill: '#4e5359' }, 'STATISTICS KEPT'));
+    el('text', { x: 0, y: H - 6, 'font-family': 'JetBrains Mono, monospace', 'font-size': 10, 'letter-spacing': '0.1em', fill: LABEL }, 'SMALLEST GROUP →'),
+    el('text', { x: 0, y: 10, 'font-family': 'JetBrains Mono, monospace', 'font-size': 10, 'letter-spacing': '0.1em', fill: LABEL }, 'STATISTICS KEPT'));
 }

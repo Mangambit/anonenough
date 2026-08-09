@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AnonEnough — re-identification audit</title>
 <meta name="description" content="Reads the spreadsheet you are about to publish and reports, row by row, how many people each combination of answers could belong to.">
+<meta name="theme-color" content="#0a0b0c">
+<meta property="og:title" content="AnonEnough — re-identification audit">
+<meta property="og:description" content="You removed the names. The spreadsheet still knows who they are. Audit any CSV in your browser — nothing is uploaded.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0b0c'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='20' fill='%235b93f0' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="./assets/fonts.css">
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -19,7 +24,7 @@
       <div class="nav__brand">
         <div class="status-dot" data-status-dot aria-hidden="true"></div>
         <span class="wordmark">anonenough</span>
-        <span class="chip-outline">rev 02</span>
+        <span class="chip-outline">runs locally</span>
       </div>
       <div class="nav__links">
         <a class="nav__link" href="#sheet">The sheet</a>
@@ -39,10 +44,10 @@
     <div class="hero__grid">
       <h1 class="hero__title">You removed the names.<br><span class="muted">The spreadsheet still knows</span> who they are.</h1>
       <div class="hero__aside">
-        <p class="hero__lede">AnonEnough reads the file you are about to publish and reports, row by row, how many people each combination of answers could belong to. When the answer is one, it says so in plain English — before anyone else works it out.</p>
+        <p class="hero__lede">AnonEnough reads the file you are about to publish and reports, row by row, how many people each combination of answers could belong to. When the answer is one, it says so in plain English — before anyone else works it out. Start on the demo survey, or drop in your own export: it is parsed in this tab and never leaves it.</p>
         <div class="hero__ctas">
           <button type="button" class="btn btn--primary btn--md" data-jump-sheet>Open the demo sheet</button>
-          <a class="btn btn--ghost btn--md" href="#limits">What it cannot tell you</a>
+          <button type="button" class="btn btn--ghost btn--md" data-upload-trigger>Audit your own CSV</button>
         </div>
       </div>
     </div>
@@ -55,16 +60,24 @@
 
       <div class="sheet__titlebar">
         <div style="display:flex;align-items:center;gap:14px;min-width:0">
-          <div class="sheet__lights" aria-hidden="true"><span></span><span></span><span></span></div>
           <span class="sheet__filename" data-filename></span>
         </div>
-        <span class="chip-outline">network requests 0</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="chip-outline">network requests 0</span>
+          <button type="button" class="sheet-load" data-upload-trigger>Load your CSV</button>
+        </div>
       </div>
+
+      <div class="sheet__notices" data-notices hidden></div>
 
       <div class="sheet__toolbar">
         <div class="toolbar__group">
           <span class="toolbar__label" id="qi-label">Attacker recognizes</span>
           <div class="toolbar__group" role="group" aria-labelledby="qi-label" data-qi-chips></div>
+        </div>
+        <div class="toolbar__group">
+          <label class="toolbar__label" for="sens-select">Sensitive answer</label>
+          <select class="sens-select" id="sens-select" data-sensitive></select>
         </div>
         <div class="toolbar__group toolbar__group--right">
           <span class="preview-pill" data-preview-pill hidden>Preview · not applied</span>
@@ -108,7 +121,7 @@
       <div class="card">
         <span class="card__step">STEP 02</span>
         <h3>We count how many people share each answer</h3>
-        <p>Every row is grouped with the rows that look identical to that outsider. The size of the smallest group is <em>k</em>. When k is 1, a single row belongs to one identifiable person.</p>
+        <p>Every row is grouped with the rows that look identical to that outsider. The size of the smallest group is <em>k</em>. When k is 1, that row describes exactly one person <em>in this file</em> — which is what makes them findable by someone who already knows them, not proof that anyone has been identified.</p>
       </div>
       <div class="card">
         <span class="card__step">STEP 03</span>
@@ -121,6 +134,7 @@
 
   <!-- ── Metrics ───────────────────────────────────────────────────────────── -->
   <section class="shell section reveal" style="padding-top:64px">
+    <div class="metrics-caption" data-metrics-caption hidden></div>
     <div class="metrics" data-metrics></div>
   </section>
 
@@ -154,7 +168,7 @@
           <span class="accent">◆ recommended tradeoff — click any point to apply it</span>
         </div>
         <div class="tradeoff__tables">
-          <div class="micro" style="padding-bottom:12px">Tables declared for release — under the policy currently applied</div>
+          <div class="micro" style="padding-bottom:12px" data-tables-heading></div>
           <div class="table-strip" data-table-strip></div>
         </div>
       </div>
@@ -221,10 +235,12 @@
 
   <footer class="footer">
     <span data-provenance></span>
-    <span>k-anonymity · total-variation fidelity · exhaustive lattice search</span>
+    <span>Sweeney 2002 · El Emam &amp; Dankar 2008 · Machanavajjhala 2007 · exhaustive lattice search</span>
   </footer>
 
 </div>
+
+<input type="file" accept=".csv,text/csv,text/tab-separated-values,.tsv" data-file-input hidden aria-hidden="true" tabindex="-1">
 
 <script type="module" src="src/app.js"></script>
 </body>
