@@ -1,30 +1,33 @@
 # AnonEnough
 
+**Live: <https://anonenough.vercel.app>**
+
 A browser-only re-identification audit for a spreadsheet of survey responses that is about
 to be published. It reports, row by row, how many people each combination of answers could
 belong to, names the smallest group (**k**), and recommends the least destructive way to
 raise it without destroying the statistics the publisher said they intended to release.
 
-The file never leaves the tab.
+Open the demo survey, or drop in your own CSV. **The file never leaves the tab** — there is
+no upload endpoint, and the page makes no network request after its own assets load. Turn
+off Wi-Fi and reload; it still works.
 
 ## Run it
 
-No build step and no dependencies. Any static server will do:
+No build step, no install, no dependencies. Any static server will do:
 
 ```bash
-python3 -m http.server 8123 --directory "Personal Projects/anonenough"
+python3 -m http.server 8123
 ```
 
 Then open <http://localhost:8123>. (ES modules need a server — opening `index.html` over
 `file://` is blocked by the browser's module CORS rules.)
 
-From Claude Code, `preview_start` with the `anonenough` entry in the vault's
-`.claude/launch.json` does the same thing.
-
 ## Test it
 
+Node 18+, still no install:
+
 ```bash
-node --test 'test/*.test.mjs'
+node --test
 ```
 
 62 tests covering the engine (ladders, equivalence classes, fidelity, distortion, the
