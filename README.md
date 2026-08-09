@@ -27,17 +27,21 @@ From Claude Code, `preview_start` with the `anonenough` entry in the vault's
 node --test 'test/*.test.mjs'
 ```
 
-40 tests covering the engine: ladders, equivalence classes, fidelity, distortion, the
-lattice search, the attacker sentence, and the word diff. The numbers pinned in the tests
-were measured from the engine, not copied from the design handoff — see `NOTES.md`.
+62 tests covering the engine (ladders, equivalence classes, fidelity, distortion, the
+lattice search, the attacker sentence, the word diff) and the upload path (RFC-4180
+parsing, delimiter sniffing, schema inference, auto-ladder nesting). The numbers pinned in
+the tests were measured from the engine, not copied from the design handoff — see
+`NOTES.md`.
 
 ## Layout
 
 ```
 index.html          page structure; every dynamic region carries a data- hook
-styles.css          design tokens and layout — no border radius anywhere, deliberately
+styles.css          design tokens and layout
 src/schema.js       column names, labels, and the demo file's vocabularies
 src/survey.js       seeded synthetic roster + responses (no real student answers)
+src/csv.js          RFC-4180 CSV reader: quotes, embedded newlines, delimiter sniffing
+src/infer.js        schema inference for uploads — ladders, identifiers, assumed tables
 src/engine.js       the analysis engine — pure, no DOM, fully tested
 src/narrate.js      the plain-English attacker sentence and its word-level diff
 src/chart.js        the privacy/fidelity frontier plot (hand-built SVG)
@@ -52,7 +56,9 @@ assets/stakes.jpg   the editorial photograph behind the "If this fails" band
    as *quasi-identifiers* — things a classmate, parent or teacher could recognize on sight.
    Nothing else is assumed. This declaration, not the maths, is the arguable part.
 2. **Rows are grouped with the rows that look identical to that outsider.** The size of the
-   smallest group is `k`. When `k` is 1, a row belongs to exactly one identifiable person.
+   smallest group is `k`. When `k` is 1, that row describes exactly one person *in this
+   file* — which is what makes them findable by someone who already knows them. It is not
+   proof that anyone has been identified.
 3. **The cheapest way to raise `k` is searched exhaustively.** Every combination of
    coarsening in the lattice is evaluated; any policy that would destroy a table the
    publisher declared for release is discarded; what survives is ranked by how much of the
@@ -87,9 +93,34 @@ The audit reports risk under a *stated* set of assumptions. It never says a file
 Method: k-anonymity after Sweeney (2002); the two risk framings after El Emam & Dankar
 (2008); fidelity measured as total variation distance.
 
+## Auditing your own file
+
+Drag a CSV onto the sheet, or press **Load your CSV**. It is read with the `File` API and
+parsed in the tab; there is no upload endpoint, and the page makes no network request after
+its own assets load. Reloading forgets the file.
+
+Inference then has to guess four things, and it states every guess in a notice strip above
+the sheet rather than burying it:
+
+| Guess | Rule | How to override |
+|---|---|---|
+| Direct identifiers | non-numeric and ≥90% distinct (≥50% if the header says name/email/id) | — removed before the audit; reload to start over |
+| Attacker-known columns | the three lowest-cardinality recognizable columns | the chips |
+| Sensitive answer | the last informative column | the dropdown |
+| Tables you would publish | sensitive × each attacker column, minus the highest-cardinality one | — |
+
+The last row is the one to be careful with. On the demo file the publisher *declares* their
+output tables, so fidelity means something specific. On an upload nobody declared anything,
+so the page says **assumed tables**, never *declared*, and the notice names exactly which
+tables the fidelity percentage is measured against.
+
+Two limits, stated because they are real: the first 5,000 rows are audited (the lattice
+search is exhaustive), and at most 6 attacker columns can be active at once. Both are
+reported on screen when they bind.
+
 ## Not built yet
 
-See `NOTES.md` for the full list and for where this implementation knowingly departs from
-the design handoff. The short version: there is no file upload (the sheet is synthetic data
-from a seed), the declared-tables set is hardcoded, only the prosecutor risk framing is
-reported, and there is no export.
+See `NOTES.md`. The short version: the declared-tables set cannot be edited through the UI,
+only the prosecutor risk framing is reported (journalist risk needs a population roster),
+the search optimizes for `k` and reports ℓ-diversity separately rather than targeting it,
+and there is no export of the anonymized file.

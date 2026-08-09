@@ -64,17 +64,33 @@ narrative depends on.
 
 ## Known gaps
 
-- **No file upload.** The sheet is synthetic data generated from seed 4207 (820-student
-  roster, 52% response rate → 431 rows). A real implementation needs CSV/XLSX parsing,
-  column type detection, and a mapping step where the user declares which columns are
-  quasi-identifiers and which are sensitive. The four knobs the design exposed as props
-  (`seed`, `sensitiveQuestion`, `defaultSheet`, `rowsVisible`) live in `CONFIG` at the top
-  of `src/app.js` and are the natural place for that step to write to.
-- **The declared-tables set is hardcoded** (`DECLARED_TABLES` in `src/app.js`). It should
-  be user-declared — it is the input that decides which fixes are even permissible.
-- **Only the prosecutor risk framing is reported.** The journalist framing needs a
-  population roster to mean anything; both are currently shown as the same upper bound,
-  and the advisor note says so explicitly.
+- ~~**No file upload.**~~ **Built.** `src/csv.js` (RFC-4180: quotes, escaped quotes,
+  embedded delimiters and newlines, CRLF, delimiter sniffing) and `src/infer.js` (numeric
+  detection, direct-identifier detection, power-of-two auto-ladders, initial attacker
+  model, assumed tables). Both zero-dependency. The demo file and an uploaded CSV now
+  produce the same *dataset descriptor* shape, so nothing downstream knows which is loaded.
+
+  Two bugs this shook out, both of which the demo file had been hiding:
+  1. `tablesFor` declared a table over **every** attacker column. A table dies when its
+     group-by column is suppressed, and the search refuses any policy that kills a table —
+     so every route to a larger group was forbidden and the search returned empty. The demo
+     only worked because `homeroom` happens to sit in no table. Fix: leave the
+     highest-cardinality column out of the declared set (it is also the least plausible
+     publication axis).
+  2. `describePolicy` looked labels up in the demo's `SHORT` table, so an uploaded file's
+     recommendation rendered as `undefined → removed`. It now takes a label map and falls
+     back to the column name.
+
+- **The declared-tables set still cannot be edited through the UI.** For the demo it is
+  hardcoded; for an upload it is inferred. Inference is disclosed in the notice strip and
+  the labels say **assumed tables**, never *declared* — but letting the user state their
+  real output tables remains the single highest-value thing left to build. It is the input
+  that decides which fixes are even permissible.
+- **Only the prosecutor risk framing is reported.** This was previously described as both
+  framings "shown as the same upper bound", which overstated it: journalist risk is defined
+  against *population* equivalence-class sizes and a single file cannot supply them. The
+  page now names the prosecutor framing explicitly and says journalist risk is not computed,
+  noting only that it would be no higher, since the file is a subset of the roster.
 - **No export.** A real audit should emit a JSON or PDF report.
 - ~~**Fonts come from Google Fonts.**~~ **Fixed.** The three families are now self-hosted
   in `assets/fonts/` (latin + latin-ext woff2, 272 KB, generated from the Google Fonts CSS
@@ -87,4 +103,15 @@ narrative depends on.
   export. Replace it with a licensed photograph if this ships publicly.
 - **`src/app.js` and `src/chart.js` are not unit-tested** — they are DOM rendering, and the
   logic worth testing was kept out of them. They were verified by driving the running page
-  (every control, both animations, all three sheet tabs, all 31 attacker models).
+  (every control, both animations, all three sheet tabs, all 31 attacker models), and the
+  upload path was verified end-to-end on the live deployment with a synthesized drop of an
+  HR survey the code had never seen.
+- **Whitespace handling in the parser was a near-miss worth recording.** The first version
+  trimmed every field, so `"  A  "` and `"A"` collapsed to one value — merging two
+  equivalence classes and reporting a *higher* k than the file has. A privacy tool whose
+  parser rounds toward reassurance is worse than no tool. Quoted fields are now preserved
+  byte-for-byte, unquoted ones are trimmed, and a test fails if that inverts. Found by an
+  external code review, not by the test suite.
+- **The exhaustive search runs synchronously on the main thread.** Capped at 5,000 rows and
+  6 active attacker columns, both stated on screen when they bind. A larger file would want
+  a worker; the cap is honest rather than silent, but it is a cap.
